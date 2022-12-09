@@ -69,112 +69,123 @@ const moviesAPIController = {
         })
         .catch(error => console.log(error))
     },
-    create: (req,res) => {
-        Movies
-        .create(
-            {
-                title: req.body.title,
-                rating: req.body.rating,
-                awards: req.body.awards,
-                release_date: req.body.release_date,
-                length: req.body.length,
-                genre_id: req.body.genre_id
-            }
-        )
-        .then(confirm => {
-            let respuesta;
-            if(confirm){
-                respuesta ={
-                    meta: {
-                        status: 200,
-                        total: confirm.length,
-                        url: 'api/movies/create'
-                    },
-                    data:confirm
+    create: async (req, res) => {
+        try {
+            const { title, rating, awards, release_date, length, genre_id } = req.body;
+
+            const movie = await db.Movie.create({
+                title: title?.trim(),
+                rating,
+                awards,
+                release_date,
+                length,
+                genre_id
+            })
+
+            return res.status(200).json({
+                ok: true,
+                meta: {
+                    status: 200,
+                    total: movie.length,
+                    url: 'api/movies/create'
+                },
+                msg: "Pelicula creada con exito",
+                data: {
+                    movie
                 }
-            }else{
-                respuesta ={
-                    meta: {
-                        status: 200,
-                        total: confirm.length,
-                        url: 'api/movies/create'
-                    },
-                    data:confirm
+            })
+
+        } catch (error) {
+            console.log(error)
+            const showErrors = error.errors.map(error => {
+                return {
+                    path: error.path,
+                    message: error.message
                 }
-            }
-            res.json(respuesta);
-        })    
-        .catch(error => res.send(error))
+            })
+
+            return res.status(error.status || 500).json({
+                ok: false,
+                status: error.status || 500,
+                errors: showErrors,
+            })
+        }
     },
-    update: (req,res) => {
-        let movieId = req.params.id;
-        Movies.update(
-            {
-                title: req.body.title,
-                rating: req.body.rating,
-                awards: req.body.awards,
-                release_date: req.body.release_date,
-                length: req.body.length,
-                genre_id: req.body.genre_id
-            },
-            {
-                where: {id: movieId}
-        })
-        .then(confirm => {
-            let respuesta;
-            if(confirm){
-                respuesta ={
-                    meta: {
-                        status: 200,
-                        total: confirm.length,
-                        url: 'api/movies/update/:id'
-                    },
-                    data:confirm
+    update: async (req, res) => {
+        const { title, rating, awards, release_date, length, genre_id } = req.body;
+
+        try {
+            let movieId = req.params.id;
+            let movie = await db.Movie.findByPk(movieId);
+
+            movie.title = title?.trim() || movie.title;
+            movie.rating = rating || movie.rating
+            movie.awards = awards || movie.awards
+            movie.release_date = release_date || movie.release_date
+            movie.length = length || movie.length
+            movie.genre_id = genre_id || movie.genre_id
+
+            await movie.save()
+
+
+            return res.status(200).json({
+                ok: true,
+                meta: {
+                    status: 200,
+                    total: movie.length,
+                    url: 'api/movies/update/:id'
+                },
+                msg: "Pelicula actualizada con exito",
+                data: {
+                    movie
                 }
-            }else{
-                respuesta ={
-                    meta: {
-                        status: 204,
-                        total: confirm.length,
-                        url: 'api/movies/update/:id'
-                    },
-                    data:confirm
-                }
-            }
-            res.json(respuesta);
-        })    
-        .catch(error => res.send(error))
+            })
+        } catch (error) {
+            return res.status(error.status || 500).json({
+                ok: false,
+                status: error.status || 500,
+                message: error.message || "upss, error!!!",
+            })
+        }
     },
-    destroy: (req,res) => {
-        let movieId = req.params.id;
-        Movies
-        .destroy({where: {id: movieId}, force: true}) // force: true es para asegurar que se ejecute la acción
-        .then(confirm => {
-            let respuesta;
-            if(confirm){
-                respuesta ={
-                    meta: {
-                        status: 200,
-                        total: confirm.length,
-                        url: 'api/movies/destroy/:id'
-                    },
-                    data:confirm
+    destroy: async (req, res) => {
+        try {
+            let movieId = req.params.id;
+
+            await db.Actor.update(
+                {
+                    favorite_movie_id: null
+                },
+                {
+                    where: {
+                        favorite_movie_id: movieId
+                    }
                 }
-            }else{
-                respuesta ={
-                    meta: {
-                        status: 204,
-                        total: confirm.length,
-                        url: 'api/movies/destroy/:id'
-                    },
-                    data:confirm
-                }
-            }
-            res.json(respuesta);
-        })    
-        .catch(error => res.send(error))
+            )
+
+            await db.Movie.destroy({
+                where: {
+                    id: movieId
+                },
+                force: true// force: true es para asegurar que se ejecute la acción
+            })
+
+            return res.status(200).json({
+                ok: true,
+                meta: {
+                    status: 200,
+                    url: 'api/movies/delete/:id'
+                },
+                msg: "Pelicula eliminada con exito"
+            })
+        } catch (error) {
+            return res.status(error.status || 500).json({
+                ok: false,
+                status: error.status || 500,
+                message: error.message || "upss, error!!!",
+            })
+        }
     }
-    
 }
 
 module.exports = moviesAPIController;

@@ -3,6 +3,7 @@ const router = express.Router();
 const moviesAPIController = require('../../controllers/api/moviesAPIController');
 
 //Rutas
+/* /api/movies */
 //Listado de películas
 router.get('/', moviesAPIController.list);
 //Detalle de una película
